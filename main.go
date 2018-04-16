@@ -58,7 +58,9 @@ func main() {
 	perLine := ""
 	for e := range l {
 		if perLine != l[e] {
-			println(l[e])
+			if cmd.v {
+				println(l[e])
+			}
 			fp.WriteString("server=/" + l[e] + "/" + cmd.dns + "\n")
 		}
 		perLine = l[e]
