@@ -31,6 +31,7 @@ func main() {
 	pattern := `^([01]?\d\d?|2[0-4]\d|25[0-5])\.([01]?\d\d?|2[0-4]\d|25[0-5])\.([01]?\d\d?|2[0-4]\d|25[0-5])\.([01]?\d\d?|2[0-4]\d|25[0-5])$`
 	compile := regexp.MustCompile(pattern)
 	var l []string
+	perLine := ""
 	for line := range lines {
 		if len(lines[line]) == 0 {
 			continue
@@ -43,26 +44,34 @@ func main() {
 		} else if compile.MatchString(lines[line]) {
 			continue
 		} else if lines[line][0:2] == "||" {
-			l = append(l, lines[line][2:])
+			if perLine != lines[line][2:] {
+				l = append(l, "server=/"+lines[line][2:]+"/"+cmd.dns)
+			}
+			perLine = lines[line][2:]
 		} else if lines[line][0] == '.' {
-			l = append(l, lines[line][1:])
+			if perLine != lines[line][1:] {
+				l = append(l, "server=/"+lines[line][1:]+"/"+cmd.dns)
+			}
+			perLine = lines[line][1:]
 		} else {
-			l = append(l, lines[line])
+			if perLine != lines[line] {
+				l = append(l, "server=/"+lines[line]+"/"+cmd.dns)
+			}
+			perLine = lines[line]
 		}
 	}
-	fp, err := os.OpenFile(cmd.saveFile, os.O_CREATE|os.O_TRUNC, 0755)
+
+	fp, err := os.OpenFile(cmd.saveFile, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0755)
 	if err != nil {
 		log.Fatalln(err)
 	}
 	defer fp.Close()
-	perLine := ""
-	for e := range l {
-		if perLine != l[e] {
-			if cmd.v {
-				println(l[e])
-			}
-			fp.WriteString("server=/" + l[e] + "/" + cmd.dns + "\n")
-		}
-		perLine = l[e]
+
+	dnsmasqServer := strings.Join(l, "\n")
+
+	if cmd.v {
+		println(dnsmasqServer)
 	}
+
+	fp.WriteString(dnsmasqServer)
 }
