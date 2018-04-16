@@ -7,6 +7,7 @@ import (
 	"strings"
 	"regexp"
 	"os"
+	"log"
 )
 
 func Decode(raw []byte) []byte {
@@ -18,9 +19,15 @@ func Decode(raw []byte) []byte {
 func main() {
 	cmd := parseCmd()
 	client := http.Client{}
-	resp, _ := client.Get(cmd.gfwListUrl)
-	by, _ := ioutil.ReadAll(resp.Body)
-	lines := strings.Split(string(Decode(by)), "\n")
+	resp, err := client.Get(cmd.gfwListUrl)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	lines := strings.Split(string(Decode(body)), "\n")
 	pattern := `^([01]?\d\d?|2[0-4]\d|25[0-5])\.([01]?\d\d?|2[0-4]\d|25[0-5])\.([01]?\d\d?|2[0-4]\d|25[0-5])\.([01]?\d\d?|2[0-4]\d|25[0-5])$`
 	compile := regexp.MustCompile(pattern)
 	var l []string
@@ -43,7 +50,10 @@ func main() {
 			l = append(l, lines[line])
 		}
 	}
-	fp, _ := os.OpenFile(cmd.saveFile, os.O_CREATE|os.O_TRUNC, 0755)
+	fp, err := os.OpenFile(cmd.saveFile, os.O_CREATE|os.O_TRUNC, 0755)
+	if err != nil {
+		log.Fatalln(err)
+	}
 	defer fp.Close()
 	perLine := ""
 	for e := range l {
